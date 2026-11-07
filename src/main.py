@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from src.api.v1.topics import router as topics_router
+from src.api.v1.questions import router as questions_router
 from src.database.mongodb import client, database
 from src.database.indexes import create_indexes
 
@@ -30,6 +31,7 @@ app = FastAPI(
 
 # Register topic endpoints
 app.include_router(topics_router, prefix="/api/v1")
+app.include_router(questions_router, prefix="/api/v1")
 
 
 @app.get("/")

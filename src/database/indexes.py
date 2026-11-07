@@ -25,3 +25,13 @@ async def create_indexes(db: AsyncDatabase):
     await topics.create_index(
         [("created_at", -1)]
     )
+    
+    questions = db["questions"]
+
+    await questions.create_index(
+        [
+            ("topic_id", 1),
+            ("sequence_number", 1)
+        ],
+        unique=True
+    )
