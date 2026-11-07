@@ -1,54 +1,37 @@
-from fastapi import FastAPI, Header, HTTPException
-from .auth.validate_user import validate_user
-from .services.topic_progress_per_user import topic_progress
-from .services.submit_solution import submit_solution
-app = FastAPI()
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from src.api.v1.topics import router as topics_router
+from src.database.mongodb import client, database
+from src.database.indexes import create_indexes
+
+
+@asynccontextmanager #It converts an asynchronous generator function containing yield into an asynchronous context manager.
+async def lifespan(app: FastAPI):
+    # Runs when FastAPI starts
+    await client.admin.command("ping")
+    print("MongoDB connected successfully")
+
+    await create_indexes(database)
+    print("Database Indexes updates successfully")
+
+    yield #everything before yield executes before during startup and everything after it, will be executed during shutdown
+
+    # Runs when FastAPI shuts down
+    await client.close()
+
+
+app = FastAPI(
+    title="CodeCapstone",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Register topic endpoints
+app.include_router(topics_router, prefix="/api/v1")
+
 
 @app.get("/")
-def home():
-    return {
-        "message" : "hello world"
-    }
-    
-@app.get("/user/{user_id}")
-def get_user(user_id: int):
-    return {
-        "user_id": user_id,
-        "name": "Armaan"
-    }
-    
-@app.get("/topic/{topic_name}/capstone")
-def get_topic_progress(
-    user_id : str,
-    topic_id : int,
-    auth_token : str = Header() #this will ask api to get details from http header not in parameter
-):
-    if not validate_user(user_id, auth_token):
-        raise HTTPException(
-            status_code = 401,
-            detail="Invalid authentication token"
-        )
-    
-    response : dict = topic_progress(user_id, topic_id)
-    
-    return response
-
-@app.post("/question/{question_id}/submit")
-def submit_solution_endpoint(
-    user_id : str,
-    topic_id : int,
-    question_id : str,
-    code_language : str,
-    solution : str,
-    ai_review_enabled : bool,
-    auth_token : str = Header()
-):
-    if not validate_user(user_id, auth_token):
-        raise HTTPException(
-            status_code = 401,
-            detail="Invalid authentication token"
-        )
-    
-    response : dict = submit_solution(user_id, topic_id, question_id, code_language, solution, ai_review_enabled = ai_review_enabled)
-    
-    return response
+async def home():
+    return {"message": "Welcome to CodeCapstone"}
